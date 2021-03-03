@@ -79,7 +79,7 @@ To run the supplied unit tests for **CryptorRSA** from the command line:
 To include BlueRSA into a Swift Package Manager package, add it to the `dependencies` attribute defined in your `Package.swift` file. You can select the version using the `majorVersion` and `minor` parameters. For example:
 ```
 	dependencies: [
-		.Package(url: "https://github.com/IBM-Swift/BlueRSA", majorVersion: <majorVersion>, minor: <minor>)
+		.package(url: "https://github.com/IBM-Swift/BlueRSA", majorVersion: <majorVersion>, minor: <minor>)
 	]
 ```
 
@@ -184,7 +184,7 @@ let myData: Data = <... Data to be encrypted ...>
 
 let publicKey = try CryptorRSA.createPublicKey(withPEMNamed: keyName, onPath: keyPath)
 let myPlaintext = CryptorRSA.createPlaintext(with: myData)
-let encryptedData = try myPlaintext.encrypt(with: publicKey, algorithm: .sha1)
+let encryptedData = try myPlaintext.encrypted(with: publicKey, algorithm: .sha1)
 
 ...
 
@@ -248,9 +248,9 @@ let privateKey = try CryptorRSA.createPrivateKey(withPEMNamed: pkeyName, onPath:
 let myData: Data = <... Data to be encrypted ...>
 
 let myPlaintext = CryptorRSA.createPlaintext(with: myData)
-let encryptedData = try myPlaintext.encrypt(with: publicKey, algorithm: .sha1)
+let encryptedData = try myPlaintext.encrypted(with: publicKey, algorithm: .sha1)
 
-let decryptedData = try encryptedData.decrypt(with: privateKey, algorithm: .sha1)
+let decryptedData = try encryptedData.decrypted(with: privateKey, algorithm: .sha1)
 
 ...
 
