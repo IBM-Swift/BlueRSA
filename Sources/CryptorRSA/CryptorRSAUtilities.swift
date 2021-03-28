@@ -62,37 +62,34 @@ public extension CryptorRSA {
 		// Create a memory BIO...
 		let bio = BIO_new(BIO_s_mem())
 	
-        defer {
-            BIO_free(bio)
-        }
+		defer {
+			BIO_free(bio)
+		}
 		// Create a BIO object with the key data...
 		try headerKey.withUnsafeBytes() { (buffer: UnsafeRawBufferPointer) in
 
 			let len = BIO_write(bio, buffer.baseAddress?.assumingMemoryBound(to: UInt8.self), Int32(headerKey.count))
-            guard len != 0 else {
-                let source = "Couldn't create BIO reference from key data"
-                if let reason = CryptorRSA.getLastError(source: source) {
-    
-                    throw Error(code: ERR_ADD_KEY, reason: reason)
-                }
-                throw Error(code: ERR_ADD_KEY, reason: source + ": No OpenSSL error reported.")
-            }
+			guard len != 0 else {
+			let source = "Couldn't create BIO reference from key data"
+				if let reason = CryptorRSA.getLastError(source: source) {
+					throw Error(code: ERR_ADD_KEY, reason: reason)
+				}
+				throw Error(code: ERR_ADD_KEY, reason: source + ": No OpenSSL error reported.")
+			}
 			// The below is equivalent of BIO_flush...
-            BIO_ctrl(bio, BIO_CTRL_FLUSH, 0, nil)
+			BIO_ctrl(bio, BIO_CTRL_FLUSH, 0, nil)
 		}
 		
-		var evp_key: OpaquePointer?
-
-        // Read in the key data and process depending on key type...
-        if type == .publicType {
-			
-			evp_key = .init(d2i_PUBKEY_bio(bio, nil))
-
-        } else {
-			
-			evp_key = .init(d2i_PrivateKey_bio(bio, nil))
-        }
-        return evp_key
+	        // Read in the key data and process depending on key type...
+		var keyMaybe = (type == .publicType ? d2i_PUBKEY_bio(bio, nil) : d2i_PrivateKey_bio(bio, nil))
+		guard let key = keyMaybe else {
+			let source = "Failed to create key from BIO"
+	               	if let reason = CryptorRSA.getLastError(source: source) {
+	                    throw Error(code: ERR_ADD_KEY, reason: reason)
+	                }
+	                throw Error(code: ERR_ADD_KEY, reason: source + ": No OpenSSL error reported.")
+		}	
+	        return .init(key)
 	}
 
 	///

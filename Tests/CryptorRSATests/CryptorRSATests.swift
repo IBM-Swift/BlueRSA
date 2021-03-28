@@ -757,21 +757,61 @@ cSNAr2BBC8bJ9AfZnRu9+Y1/VyXY91R95bQoMFfgwZdMUEyuL5gG524QplqF
 				let (tempPrivKey, tempPubKey) = try CryptorRSA.makeKeyPair(bitSize)
 				let privString = tempPrivKey.pemString
 				let pubString = tempPubKey.pemString
-				let privKey = try CryptorRSA.createPrivateKey(withPEM: privString)
-				let pubKey = try CryptorRSA.createPublicKey(withPEM: pubString)
-				let str = "Plain Text"
-				let plainText = try CryptorRSA.createPlaintext(with: str, using: .utf8)
-				let encrypted = try plainText.encrypted(with: pubKey, algorithm: .gcm)
-				let decrypted = try encrypted?.decrypted(with: privKey, algorithm: .gcm)
-				XCTAssertNotNil(decrypted)
-				let decryptedString = try decrypted?.string(using: .utf8)
-				XCTAssertEqual(decryptedString, str)
+				do {
+					let privKey = try CryptorRSA.createPrivateKey(withPEM: privString)
+					do {
+						let pubKey = try CryptorRSA.createPublicKey(withPEM: pubString)
+						let str = "Plain Text"
+						do {
+							let plainText = try CryptorRSA.createPlaintext(with: str, using: .utf8)
+							let encrypted = try plainText.encrypted(with: pubKey, algorithm: .gcm)
+							let decrypted = try encrypted?.decrypted(with: privKey, algorithm: .gcm)
+							XCTAssertNotNil(decrypted)
+							let decryptedString = try decrypted?.string(using: .utf8)
+							XCTAssertEqual(decryptedString, str)
+						} catch {
+							XCTFail("Encryption / decryption failed for bitSize: \(bitSize.bits): \(error)")
+						}
+					} catch {
+						XCTFail("createPublicKey failed for bitSize: \(bitSize.bits): \(error), PEM: '\(pubString)'")
+					}
+				} catch {
+					XCTFail("createPrivateKey failed for bitSize: \(bitSize.bits): \(error), PEM: '\(privString)'")
+				}
 			} catch {
 				XCTFail("test_makeKeyPair failed for bitSize: \(bitSize.bits), with error: \(error)")
 			}
 		}
 		
 		
+	}
+
+	// Test that when the data for a key has a value of 0x30 in byte 27, it is not
+	// erroneously interpreted as pkcs8 by stripX509CertificateHeader (whereby the
+	// first 26 bytes are dropped).
+	// See https://github.com/IBM-Swift/BlueRSA/issues/52
+	func testSpecificPEM() {
+		let pemString = """
+-----BEGIN RSA PUBLIC KEY-----
+MIIBigKCAYEAsdrDG5WLDpbIa5cHIwhFvkkwpWG3ULikyMsNWUq0/d1uaRdlemgvS
+u21PqwDhBsgFjBn8ENQsOQpr5Bm2tC2XIchKPjEnsA3WsQ2iIkbDzrmbj5r2z1iiy
+n/veMZEG0+Dg5H91I+2SG7c406rUgU00py/Y/C/aQCJonhpEolvuF3tgUt6/6X1mz
+Y2ANwBzm3Zv9JoK0nAWZFqTkj9WrUXQprBi3G/mTLMaOScZzSig+rr8uxyl3TnV+X
+bFuqD6hweWrCDOWJFZOHzflflCN/dFGHcUZqJNygjSY0LBBN7G2ES6XRlrr0OPypU
+otmFEXJ1djQdlAVLc/LofhpVdXKW8zjm/Gj4guSYDiNNSSG8KgpCbTPJ4ZQGiTrx2
+qse4PDC6PckHebpTXMUYSXLacoTEpAI9EONIuG6ThOkIyGO8elHVknhkZZZD0SIC3
+jK/J8XlsTSWFGkif8W0PQJ5amyK7C/8eWZFwA7gLpNvR4BqnsY4a+dIw4a/HD0RKQ
+AqJRAgMBAAE=
+-----END RSA PUBLIC KEY-----
+"""
+		let data1 = Data(base64Encoded: pemString) ?? Data()
+		print("data1 count=\(data1.count)")
+		do {
+			let pubKey = try CryptorRSA.createPublicKey(withPEM: pemString)
+			print("pemString1 successful")
+		} catch {
+			XCTFail("Error creating public key from pemString: \(error)")
+		}
 	}
 
 	// MARK: Test Utilities
@@ -887,6 +927,7 @@ cSNAr2BBC8bJ9AfZnRu9+Y1/VyXY91R95bQoMFfgwZdMUEyuL5gG524QplqF
 			("test_verifyExtenalPSSSignature", test_verifyExtenalPSSSignature),
             ("test_verifyAppIDToken", test_verifyAppIDToken),
             ("test_makeKeyPair", test_makeKeyPair),
+			("testSpecificPEM", testSpecificPEM),
         ]
     }
 }
